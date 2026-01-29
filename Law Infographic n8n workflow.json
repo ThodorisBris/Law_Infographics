@@ -1,0 +1,393 @@
+{
+  "name": "Law",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Legal article to Diagram",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4f021b2b-711f-4a1f-8863-22959e5f9b56",
+      "name": "Webhook",
+      "webhookId": "9ff8bc09-a724-4de2-a2e8-75dc6eef4e29"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c43ea449-ca9b-4613-a95d-6b0530c34887",
+              "leftValue": "={{ $json.retryCount }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1184,
+        192
+      ],
+      "id": "aef8be81-711a-4f63-9f3e-691c9b778758",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "errorMessage": "Error in Workflow"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1328,
+        288
+      ],
+      "id": "ab4780ae-5a1b-4d4f-a152-33d35c1da455",
+      "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "image/png"
+              },
+              {
+                "name": "Content-Disposition",
+                "value": "inline; filename=\"diagram.png\""
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1280,
+        -16
+      ],
+      "id": "fb37aa7d-27e1-4de4-823e-c1654fa3a72c",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "$json.retryCount = ($json.retryCount || 0) + 1;\nreturn $json;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        192
+      ],
+      "id": "f649b357-d0c1-4ca7-a196-a219ca3b59b8",
+      "name": "Error Counter"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Ο κώδικας Mermaid που δημιούργησες έχει συντακτικό σφάλμα και το Kroki API επέστρεψε το εξής μήνυμα: {{ $json.body.error }}\n\nΟ κώδικας που απέτυχε ήταν:{{ $('Model for Mermaid code generation').item.json.content.parts[0].text }}\n\nΠαρακαλώ ξαναγράψε τον κώδικα διορθώνοντας το σφάλμα. Επέστρεψε ΜΟΝΟ τον κώδικα, χωρίς markdown blocks (```) και χωρίς καμία άλλη επεξηγηματική λέξη."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        240
+      ],
+      "id": "8d72638d-52c5-46b9-9b7f-afca662aa8dc",
+      "name": "Model for Error Handling",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "mzhC3U21OYuIFLSO",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Είσαι βοηθός ανάλυσης νομικών κειμένων. Διάβασε το παρακάτω κείμενο νόμου και δώσε μου σε JSON τα εξής πεδία από το παρακάτω νομικό κείμενο: δικαιώματα, υποχρεώσεις, προϋποθέσεις, εξαιρέσεις, σύντομη_περίληψη.\n\nΚάθε πεδίο πρέπει να είναι λίστα (array) με 1–5 αντικείμενα.\nΓράψε σύντομη φράση για κάθε αντικείμενο (σε Ελληνικά).\nΑν κάποιο πεδίο δεν υπάρχει, βάλε κενή λίστα [].\nΕπικόλλησε μόνο το JSON ως απάντηση — χωρίς σχόλια.\n\nΚανόνες:\n1. Επιστρέφεις ΜΟΝΟ έγκυρο JSON. \n2. Καμία εξήγηση. \n3. Η απάντηση πρέπει να ξεκινά με { και να τελειώνει με }\n\nΠαρακάτω σου παραθέτω ένα παράδειγμα για το τι αποτέλεσμα θέλω να μου βγάλεις.\n\nΚείμενο νόμου:\n\nΑρθρο 8 «Κατοχή όπλων για θήρα». *** Ο τίτλος του άρθρου 8 αντικαταστάθηκε ως άνω με το άρθρο 6 παρ.1 Ν.4678/2020, ΦΕΚ Α 70/20.3.2020. 1. Οι κάτοχοι κυνηγετικών όπλων υποχρεούνται, εντός τριάντα (30) ημερών από την απόκτησή τους, να ζητήσουν τον εφοδιασμό τους με άδεια κατοχής, η οποία χορηγείται από την αστυνομική αρχή του τόπου κατοικίας τους. 2. Οι κάτοχοι κυνηγετικών όπλων υποχρεούνται: α. Να λαμβάνουν τα αναγκαία μέτρα για την ασφαλή φύλαξη των όπλων τους και να συμμορφώνονται με τις σχετικές υποδείξεις των αρμόδιων αστυνομικών αρχών. β. Να μην παραχωρούν αυτά σε τρίτα πρόσωπα, αν δεν είναι εφοδιασμένα με άδεια θήρας. 3. Με απόφαση των Υπουργών Δημάσιας Τάξης και Γεωργίας κοθορίζονται: α. Οι προδιαγραφές κυνηγετικών όπλων που κατασκευάζονται, κατέχονται ή μετασκευάζονται με οποιονδήποτε τρόπο, για τη χρησιμοποίησή τους σε όλη τη διάρκεια του έτους από καλλιεργητές για την καταπολέμηση των χαρακτηριζόμενων ως επιβλαβών ζώων. β. Ο αριθμός των κυνηγετικών όπλων που επιτρέπεται να κατέχει κάθε άτομο.\n\n\nΕπιθυμητή απάντηση (json):\n\n{\n  \"δικαιώματα\": [\n    \"Δικαίωμα κατοχής κυνηγετικού όπλου με νόμιμη άδεια\",\n    \"Δικαίωμα λήψης άδειας κατοχής από την αρμόδια αστυνομική αρχή\",\n    \"Δικαίωμα κατοχής κυνηγετικών όπλων εντός των προβλεπόμενων ορίων\"\n  ],\n  \"υποχρεώσεις\": [\n    \"Υποχρέωση αίτησης άδειας κατοχής εντός 30 ημερών από την απόκτηση\",\n    \"Υποχρέωση ασφαλούς φύλαξης των κυνηγετικών όπλων\",\n    \"Υποχρέωση συμμόρφωσης με υποδείξεις των αστυνομικών αρχών\",\n    \"Υποχρέωση μη παραχώρησης όπλων σε άτομα χωρίς άδεια θήρας\"\n  ],\n  \"προϋποθέσεις\": [\n    \"Κατοχή άδειας κατοχής για νόμιμη διατήρηση κυνηγετικού όπλου\",\n    \"Έκδοση άδειας από την αστυνομική αρχή του τόπου κατοικίας\",\n    \"Τήρηση των προβλεπόμενων προδιαγραφών όπλων\",\n    \"Τήρηση του επιτρεπόμενου αριθμού όπλων ανά άτομο\"\n  ],\n  \"εξαιρέσεις\": [],\n  \"σύντομη_περίληψη\": [\n    \"Ρυθμίζονται οι όροι και οι υποχρεώσεις για την κατοχή κυνηγετικών όπλων\",\n    \"Καθορίζεται η υποχρέωση άδειας κατοχής εντός συγκεκριμένης προθεσμίας\",\n    \"Προβλέπονται κανόνες ασφαλούς φύλαξης και περιορισμοί παραχώρησης\",\n    \"Εξουσιοδοτούνται Υπουργοί να καθορίσουν προδιαγραφές και αριθμό όπλων\"\n  ]\n}",
+              "role": "model"
+            },
+            {
+              "content": "={{ $json.body.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        160,
+        0
+      ],
+      "id": "4888080e-8ab4-4668-9680-534ffc208f98",
+      "name": "Model for JSON generation",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "mzhC3U21OYuIFLSO",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "Έχω το παρακάτω JSON.\nΜετάτρεψε το JSON σε Mermaid flowchart (graph TD) που απεικονίζει τις προϋποθέσεις → αποφάσεις → αποτέλεσμα (π.χ. \"Επιλέξιμος\" / \"Μη επιλέξιμος\") και εμφανίζει επίσης βασικές υποχρεώσεις/εξαιρέσεις. \nΧρησιμοποίησε κόμβους για: Πολίτης → Έλεγχος προϋποθέσεων → Επιλογή (Ναι/Όχι).\nΠρόσθεσε μικρούς κόμβους ή σημειώσεις για υποχρεώσεις/εξαιρέσεις.\nΔώσε μόνο το τελικό κείμενο Mermaid (μην προσθέσεις εξηγήσεις).\nΚάνε το 100% συμβατό με Mermaid/Kroki.\n\nΚανόνες:\n- Αντικατέστησε ΟΛΑ τα unicode βέλη (→ ⇒ ⇢) με \"-->\".\n- Αν βρεις \"-- >\" (με κενό), κάν' το \"-->\".\n- Αφαίρεσε ή αντικατάστησε \"/\" μέσα σε labels με \" - \".\n- Αφαίρεσε \":\" και \";\" από labels.\n- Κράτα κάθε edge σε ξεχωριστή γραμμή.\n- Μην αλλάξεις τη λογική ροής, μόνο σύνταξη/ασφάλεια.\n- ΕΠΙΣΤΡΕΨΕ ΜΟΝΟ Mermaid, χωρίς markdown/backticks.\n- Κάνε τα labels σύντομα (max 40 χαρακτήρες).\n- Για κείμενα μεγάλα, βάλε περιγραφές ως ξεχωριστούς κόμβους αντί να τα στριμώχνεις σε label.\n- Χρησιμοποίησε μόνο:\n  [] για nodes και {} για decisions.\n- Χρησιμοποίησε βέλη μόνο ως --> και γραμμές μόνο ως -- κείμενο -->.\n- ΑΥΣΤΗΡΑ ΧΩΡΙΣ \\n\n\nΣτόχος: να περνάει χωρίς error από https://kroki.io/mermaid/png\n\nΠαρακάτω σου παραθέτω ένα παράδειγμα για το τι αποτέλεσμα θέλω να μου βγάλεις.\n\nJSON:\n{\n  \"δικαιώματα\": [\n    \"Δικαίωμα κατοχής κυνηγετικού όπλου με νόμιμη άδεια\",\n    \"Δικαίωμα λήψης άδειας κατοχής από την αρμόδια αστυνομική αρχή\",\n    \"Δικαίωμα κατοχής κυνηγετικών όπλων εντός των προβλεπόμενων ορίων\"\n  ],\n  \"υποχρεώσεις\": [\n    \"Υποχρέωση αίτησης άδειας κατοχής εντός 30 ημερών από την απόκτηση\",\n    \"Υποχρέωση ασφαλούς φύλαξης των κυνηγετικών όπλων\",\n    \"Υποχρέωση συμμόρφωσης με υποδείξεις των αστυνομικών αρχών\",\n    \"Υποχρέωση μη παραχώρησης όπλων σε άτομα χωρίς άδεια θήρας\"\n  ],\n  \"προϋποθέσεις\": [\n    \"Κατοχή άδειας κατοχής για νόμιμη διατήρηση κυνηγετικού όπλου\",\n    \"Έκδοση άδειας από την αστυνομική αρχή του τόπου κατοικίας\",\n    \"Τήρηση των προβλεπόμενων προδιαγραφών όπλων\",\n    \"Τήρηση του επιτρεπόμενου αριθμού όπλων ανά άτομο\"\n  ],\n  \"εξαιρέσεις\": [],\n  \"σύντομη_περίληψη\": [\n    \"Ρυθμίζονται οι όροι και οι υποχρεώσεις για την κατοχή κυνηγετικών όπλων\",\n    \"Καθορίζεται η υποχρέωση άδειας κατοχής εντός συγκεκριμένης προθεσμίας\",\n    \"Προβλέπονται κανόνες ασφαλούς φύλαξης και περιορισμοί παραχώρησης\",\n    \"Εξουσιοδοτούνται Υπουργοί να καθορίσουν προδιαγραφές και αριθμό όπλων\"\n  ]\n}\n\n\nΚώδικας Mermaid:\ngraph TD\n  A[Πολίτης] --> B[Έλεγχος προϋποθέσεων]\n  B --> C{Έχει ή αποκτά άδεια κατοχής από την αστυνομική αρχή τόπου κατοικίας;}\n  C -- Ναι --> D{Τηρούνται προδιαγραφές όπλου;}\n  C -- Όχι --> X[Μη επιλέξιμος - Δεν επιτρέπεται νόμιμη κατοχή]\n  D -- Ναι --> E{Τηρείται επιτρεπόμενος αριθμός όπλων ανά άτομο;}\n  D -- Όχι --> X\n  E -- Ναι --> Y[Επιλέξιμος - Νόμιμη κατοχή κυνηγετικού όπλου]\n  E -- Όχι --> X\n\n  %% Υποχρεώσεις\n  Y -.-> O1([Υποχρέωση: Αίτηση άδειας εντός 30 ημερών από την απόκτηση])\n  Y -.-> O2([Υποχρέωση: Ασφαλής φύλαξη όπλων])\n  Y -.-> O3([Υποχρέωση: Συμμόρφωση με υποδείξεις αστυνομικών αρχών])\n  Y -.-> O4([Υποχρέωση: Μη παραχώρηση σε τρίτους χωρίς άδεια θήρας])\n\n  %% Εξαιρέσεις\n  Y -.-> EX([Εξαιρέσεις: Δεν προβλέπονται ρητές εξαιρέσεις])\n\n  %% Δικαιώματα\n  Y -.-> R1([Δικαίωμα: Κατοχή με νόμιμη άδεια])\n  Y -.-> R2([Δικαίωμα: Λήψη άδειας από αρμόδια αστυνομική αρχή])\n  Y -.-> R3([Δικαίωμα: Κατοχή εντός προβλεπόμενων ορίων])",
+              "role": "model"
+            },
+            {
+              "content": "={{ $json.content.parts[0].text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        432,
+        0
+      ],
+      "id": "e6483ede-a957-49b3-9ec1-3892f595fa39",
+      "name": "Model for Mermaid code generation",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "6oMW5l9WFg0i1Nv5",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ],
+      "id": "e73d445c-c715-470c-9458-0fe62f9561b6",
+      "name": "Wait (3 sec)",
+      "webhookId": "3ca31834-9d0a-4b10-b3ca-ea0980b99a01"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://kroki.io/mermaid/png",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $json.content.parts[0].text }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        880,
+        0
+      ],
+      "id": "0a2a3760-47b0-4e43-bd36-cfebb4ab314d",
+      "name": "Diagram generation (HTTP Request)",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "items[0].binary.data.fileName = 'Law Diagram';\nitems[0].binary.data.fileExtension = 'png';\nitems[0].binary.data.mimeType = 'image/png';\nreturn items;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        -16
+      ],
+      "id": "3b7ec5ba-4fe0-4976-8f99-b873e0e4b92f",
+      "name": "Rename Diagram"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Model for JSON generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Model for Error Handling",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Counter": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model for Error Handling": {
+      "main": [
+        [
+          {
+            "node": "Wait (3 sec)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model for JSON generation": {
+      "main": [
+        [
+          {
+            "node": "Model for Mermaid code generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Model for Mermaid code generation": {
+      "main": [
+        [
+          {
+            "node": "Wait (3 sec)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait (3 sec)": {
+      "main": [
+        [
+          {
+            "node": "Diagram generation (HTTP Request)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Diagram generation (HTTP Request)": {
+      "main": [
+        [
+          {
+            "node": "Rename Diagram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename Diagram": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c0a924d5-17e5-4e20-8c10-52933f380ebb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e45a7082fd8b4b637e3664b8874cd019c12fa1453918a76885ed1323c21fbfa2"
+  },
+  "id": "ICWiUUO0sPNDjev3",
+  "tags": []
+}

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <title>Νομικό Κείμενο σε Διάγραμμα</title>
+  <style>
+    button {
+      padding: 6px 12px;
+      font-size: 14px;
+      margin-right: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Μετατροπή Νομικού Κειμένου σε Διάγραμμα</h1>
+
+<textarea id="legalText" rows="10" cols="80"
+  placeholder="Εισάγετε εδώ το κείμενο του νόμου..."></textarea>
+<br><br>
+
+<button id="generateBtn" onclick="sendText()">Δημιουργία Διαγράμματος</button>
+
+<button id="downloadBtn" style="display:none;" onclick="downloadDiagram()">
+  Λήψη Διαγράμματος
+</button>
+
+<span id="spinner" style="display:none; margin-left:10px;">
+  ⏳ Παράγεται…
+</span>
+
+<br><br>
+
+<div id="zoomControls" style="display:none; margin-bottom:10px;">
+  <button onclick="zoomOut()">−</button>
+  <button onclick="resetZoom()">Reset</button>
+  <button onclick="zoomIn()">+</button>
+
+  <button id="orientationBtn" onclick="toggleOrientation()">
+    Landscape
+  </button>
+
+  <span id="zoomLabel" style="margin-left:8px;">100%</span>
+</div>
+
+<img id="diagramImg"
+     style="display:none;
+            max-width:70%;
+            margin-top:12px;
+            border:1px solid #ddd;
+            transform-origin: top left;" />
+
+<script>
+let diagramUrl = null;
+let diagramBlob = null;
+let zoom = 1.0;
+let landscape = false;
+
+function setLoading(isLoading) {
+  document.getElementById("spinner").style.display = isLoading ? "inline" : "none";
+  document.getElementById("generateBtn").disabled = isLoading;
+}
+
+function applyZoom() {
+  const img = document.getElementById("diagramImg");
+  img.style.transform = `scale(${zoom})`;
+  document.getElementById("zoomLabel").textContent =
+    Math.round(zoom * 100) + "%";
+}
+
+function zoomIn() {
+  zoom = Math.min(3.0, zoom + 0.1);
+  applyZoom();
+}
+
+function zoomOut() {
+  zoom = Math.max(0.2, zoom - 0.1);
+  applyZoom();
+}
+
+function resetZoom() {
+  zoom = 1.0;
+  applyZoom();
+}
+
+function applyOrientation() {
+  const img = document.getElementById("diagramImg");
+  img.style.maxWidth = landscape ? "95%" : "70%";
+  document.getElementById("orientationBtn").textContent =
+    landscape ? "Portrait" : "Landscape";
+}
+
+function toggleOrientation() {
+  landscape = !landscape;
+  applyOrientation();
+}
+
+async function sendText() {
+  const text = document.getElementById("legalText").value;
+  if (!text) {
+    alert("Εισάγετε το κείμενο!");
+    return;
+  }
+
+  document.getElementById("downloadBtn").style.display = "none";
+  setLoading(true);
+
+  const url =
+    "http://localhost:5678/webhook-test/Legal%20article%20to%20Diagram";
+
+  let response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json; charset=UTF-8" },
+      body: JSON.stringify({ text })
+    });
+  } catch (e) {
+    alert(
+      "❌ Δεν μπορώ να συνδεθώ με το n8n.\n\n" +
+      "✔ Έχεις πατήσει Execute workflow;\n" +
+      "✔ Είναι ανοιχτό το n8n Desktop;\n\n" +
+      e.message
+    );
+    setLoading(false);
+    return;
+  }
+
+  if (!response.ok) {
+    const err = await response.text();
+    alert("❌ Σφάλμα από n8n:\n\n" + err);
+    setLoading(false);
+    return;
+  }
+
+  const contentType = response.headers.get("Content-Type") || "";
+  if (!contentType.startsWith("image/")) {
+    const txt = await response.text();
+    alert("⚠️ Το n8n απάντησε, αλλά όχι εικόνα:\n\n" + txt);
+    setLoading(false);
+    return;
+  }
+
+  const blob = await response.blob();
+  diagramBlob = blob;
+  diagramUrl = URL.createObjectURL(blob);
+
+  const img = document.getElementById("diagramImg");
+  img.src = diagramUrl;
+  img.style.display = "block";
+
+  document.getElementById("downloadBtn").style.display = "inline-block";
+  document.getElementById("zoomControls").style.display = "block";
+
+  zoom = 1.0;
+  landscape = false;
+  applyZoom();
+  applyOrientation();
+
+  setLoading(false);
+}
+
+/* 🔥 ΣΗΜΑΝΤΙΚΟ: εδώ "ψήνουμε" λευκό φόντο στο PNG */
+async function downloadDiagram() {
+  if (!diagramBlob) return;
+
+  const tempUrl = URL.createObjectURL(diagramBlob);
+  const img = new Image();
+
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+
+    const ctx = canvas.getContext("2d");
+
+    // Λευκό φόντο
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Εικόνα από πάνω
+    ctx.drawImage(img, 0, 0);
+
+    canvas.toBlob((outBlob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(outBlob);
+      a.download = "diagram.png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }, "image/png");
+
+    URL.revokeObjectURL(tempUrl);
+  };
+
+  img.src = tempUrl;
+}
+</script>
+
+</body>
+</html>
